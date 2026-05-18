@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ppai-database
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-database
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ppai
+spec:
+  serviceName: ppai-database   # debe coincidir con el headless Service
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ppai-database
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ppai-database
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ppai
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: ppai-config
+                  key: DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: ppai-config
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ppai-secrets
+                  key: DB_PASSWORD
+            # Subdirectorio explícito dentro del volumen para evitar el error
+            # "initdb: directory is not empty"
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ppai", "-d", "ppai"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ppai", "-d", "ppai"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+  # El volumen se crea automáticamente por StatefulSet y sobrevive reinicios
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+        labels:
+          app.kubernetes.io/name: ppai-database
+          app.kubernetes.io/part-of: ppai
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # ── Ajustar storageClassName según el cluster ──────────────────
+        # K3s / Rancher Desktop : "local-path"
+        # AWS EKS               : "gp3"
+        # Azure AKS             : "managed-premium"
+        # GCP GKE               : "standard-rwo"
+        # On-prem               : verificar con: kubectl get storageclass
+        storageClassName: "standard"
+        resources:
+          requests:
+            storage: 5Gi

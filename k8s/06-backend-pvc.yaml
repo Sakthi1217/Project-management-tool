@@ -1,0 +1,20 @@
+# PVC para archivos subidos por los usuarios (/app/uploads en el backend).
+# ReadWriteOnce = 1 nodo a la vez → limita el backend a 1 réplica.
+# Para escalar el backend a >1 réplica se necesita ReadWriteMany (NFS, EFS, etc.)
+# o migrar uploads a object storage (S3, Azure Blob, GCS).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ppai-uploads-pvc
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-backend
+    app.kubernetes.io/component: uploads
+    app.kubernetes.io/part-of: ppai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "standard"   # ← Ajustar igual que en 04-database-statefulset.yaml
+  resources:
+    requests:
+      storage: 10Gi

@@ -1,0 +1,22 @@
+# Headless Service para el StatefulSet de PostgreSQL.
+# El backend se conecta usando el hostname "ppai-database" en el mismo namespace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ppai-database
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-database
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ppai
+spec:
+  # clusterIP: None lo convierte en headless — el StatefulSet lo necesita
+  # para DNS estable (ppai-database-0.ppai-database.ppai.svc.cluster.local)
+  clusterIP: None
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: ppai-database

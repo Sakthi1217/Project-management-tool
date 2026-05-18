@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Override LOCAL — solo para Docker Desktop / desarrollo en tu máquina.
+#
+# Docker Compose carga este archivo automáticamente junto con docker-compose.yml
+# cuando ejecutas: docker compose up
+#
+# NO usar en producción ni en Kubernetes.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+
+  database:
+    # Expone Postgres en el puerto 5434 del host para conectarte con
+    # cualquier cliente (TablePlus, DBeaver, psql, etc.)
+    ports:
+      - "5435:5432"
+
+  backend:
+    # Expone la API directamente en http://localhost:3003
+    # útil para probar endpoints con curl, Postman o Insomnia
+    ports:
+      - "3003:3001"
+    # Reinicio más rápido en local
+    restart: "no"
+
+  # ── Keycloak (override local) ────────────────────────────────────────────
+  # En local usa start-dev (H2 embebido, sin necesidad de keycloak-db)
+  # Acceso admin: http://localhost:8180
+  keycloak:
+    command: start-dev
+    ports:
+      - "8180:8080"
+
+  keycloak-db:
+    ports:
+      - "5436:5432"

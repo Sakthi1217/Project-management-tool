@@ -1,0 +1,30 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Runtime data
+backend/data/
+backend/uploads/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local tooling — machine-specific, never commit
+.claude/
+marketing/
+CLAUDE.MD
+gitlab-ci.yml
+notes.txt

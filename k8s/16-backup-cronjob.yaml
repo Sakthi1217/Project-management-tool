@@ -1,0 +1,94 @@
+# CronJob de backup diario de PostgreSQL.
+# Ejecuta pg_dump en formato custom (-Fc) a las 02:00 UTC cada día.
+# Retiene los últimos 30 días de backups.
+#
+# Ejecutar backup manual ahora:
+#   kubectl create job --from=cronjob/ppai-backup ppai-backup-manual -n ppai
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ppai-backup
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-backup
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: ppai
+spec:
+  schedule: "0 2 * * *"        # 02:00 UTC diariamente
+  timeZone: "America/Bogota"   # Ajustar a la zona horaria deseada
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: ppai-backup
+            app.kubernetes.io/component: db-ops   # permite acceso a Postgres por NetworkPolicy
+            app.kubernetes.io/part-of: ppai
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: postgres:16-alpine
+              env:
+                - name: PGHOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: ppai-config
+                      key: DB_HOST
+                - name: PGPORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: ppai-config
+                      key: DB_PORT
+                - name: PGDATABASE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: ppai-config
+                      key: DB_NAME
+                - name: PGUSER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: ppai-config
+                      key: DB_USER
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: ppai-secrets
+                      key: DB_PASSWORD
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backups/ppai_${TIMESTAMP}.dump"
+
+                  echo "▶ Iniciando backup → ${BACKUP_FILE}"
+                  pg_dump -Fc -f "${BACKUP_FILE}"
+                  SIZE=$(du -sh "${BACKUP_FILE}" | cut -f1)
+                  echo "✅ Backup completado: ${BACKUP_FILE} (${SIZE})"
+
+                  # Listar backups disponibles
+                  echo "─── Backups disponibles ───"
+                  ls -lh /backups/*.dump | sort -k6,7
+
+                  # Purgar backups de más de 30 días
+                  DELETED=$(find /backups -name "ppai_*.dump" -mtime +30 -print -delete | wc -l)
+                  echo "🧹 ${DELETED} backup(s) eliminado(s) por antigüedad (>30 días)"
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 300m
+                  memory: 256Mi
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: ppai-backups-pvc

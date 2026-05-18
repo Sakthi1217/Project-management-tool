@@ -1,0 +1,19 @@
+# PVC donde se almacenan los dumps de PostgreSQL.
+# Los backups se acumulan con nombre ppai_YYYYMMDD_HHMMSS.dump
+# y se purgan automáticamente después de 30 días (ver CronJob).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ppai-backups-pvc
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-backup
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: ppai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "standard"   # ← Ajustar igual que en los otros PVCs
+  resources:
+    requests:
+      storage: 20Gi

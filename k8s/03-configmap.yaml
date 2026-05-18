@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ppai-config
+  namespace: ppai
+  labels:
+    app.kubernetes.io/part-of: ppai
+data:
+  # Backend
+  NODE_ENV: "production"
+  PORT: "3001"
+
+  # Postgres — el host coincide con el nombre del Service de la BD
+  DB_HOST: "ppai-database"
+  DB_PORT: "5432"
+  DB_NAME: "ppai"
+  DB_USER: "ppai"
+
+  # Email
+  ENABLE_EMAIL: "false"
+  SMTP_PORT: "587"
+  SMTP_FROM: "noreply@example.com"
+
+  # Frontend URL (para OAuth callbacks y CORS)
+  # Cambiar al dominio real cuando se configure el Ingress
+  FRONTEND_URL: "http://ppai.midominio.com"
+  GOOGLE_CALLBACK_URL: "http://ppai.midominio.com/api/auth/google/callback"

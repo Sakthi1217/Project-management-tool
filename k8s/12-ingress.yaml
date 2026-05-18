@@ -1,0 +1,86 @@
+# Requiere nginx-ingress-controller instalado en el cluster.
+# Instalación rápida: https://kubernetes.github.io/ingress-nginx/deploy/
+#
+# Cambiar "ppai.midominio.com" por el dominio real en todas las ocurrencias.
+#
+# Para TLS con Let's Encrypt:
+#   1. Instalar cert-manager: https://cert-manager.io/docs/installation/
+#   2. Crear ClusterIssuer (ver comentarios al final del archivo)
+#   3. Descomentar las secciones tls: y la annotation de cert-manager
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ppai-ingress
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai
+    app.kubernetes.io/part-of: ppai
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+
+    # Rate limiting básico
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+
+    # ── Descomentar para TLS automático con cert-manager ──────────────
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  # ── TLS — descomentar y ajustar cuando se configure cert-manager ────
+  # tls:
+  #   - hosts:
+  #       - ppai.midominio.com
+  #     secretName: ppai-tls-cert
+  rules:
+    - host: ppai.midominio.com   # ← CAMBIAR al dominio real
+      http:
+        paths:
+          # API → Backend
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: ppai-backend
+                port:
+                  number: 3001
+          # Uploads → Backend
+          - path: /uploads
+            pathType: Prefix
+            backend:
+              service:
+                name: ppai-backend
+                port:
+                  number: 3001
+          # Todo lo demás → Frontend SPA
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ppai-frontend
+                port:
+                  number: 80
+
+# ════════════════════════════════════════════════════════════════════
+# ClusterIssuer de referencia para cert-manager (aplicar por separado)
+# ════════════════════════════════════════════════════════════════════
+# apiVersion: cert-manager.io/v1
+# kind: ClusterIssuer
+# metadata:
+#   name: letsencrypt-prod
+# spec:
+#   acme:
+#     server: https://acme-v02.api.letsencrypt.org/directory
+#     email: tu@email.com
+#     privateKeySecretRef:
+#       name: letsencrypt-prod
+#     solvers:
+#       - http01:
+#           ingress:
+#             class: nginx

@@ -1,0 +1,23 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Overlay de PRODUCCIÓN — se usa junto con docker-compose.yml
+#
+# Reemplaza build: por image: (imágenes ya construidas en Harbor).
+# El fichero .env del servidor debe contener HARBOR_URL, HARBOR_PROJECT
+# e IMAGE_TAG (el SHA del commit deployado).
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build
+#
+# NO usar en local — usa docker-compose.override.yml para desarrollo.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+
+  backend:
+    image: ${HARBOR_URL}/${HARBOR_PROJECT}/pp-ai-backend:${IMAGE_TAG:-latest}
+    # Elimina la directiva build: del compose base
+    build: !reset {}
+
+  frontend:
+    image: ${HARBOR_URL}/${HARBOR_PROJECT}/pp-ai-frontend:${IMAGE_TAG:-latest}
+    build: !reset {}

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ppai-frontend
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: ppai
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ppai-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

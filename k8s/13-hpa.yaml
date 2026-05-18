@@ -1,0 +1,37 @@
+# HPA para el frontend (stateless → escala sin problema).
+# El backend NO tiene HPA porque el PVC de uploads es ReadWriteOnce.
+# Si se migra uploads a object storage, agregar HPA para el backend también.
+#
+# Requiere metrics-server instalado en el cluster.
+# Instalación: kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ppai-frontend-hpa
+  namespace: ppai
+  labels:
+    app.kubernetes.io/name: ppai-frontend
+    app.kubernetes.io/part-of: ppai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ppai-frontend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300   # esperar 5 min antes de bajar réplicas

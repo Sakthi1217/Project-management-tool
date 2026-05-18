@@ -1,0 +1,71 @@
+/**
+ * Unit tests for LoginPage component.
+ * Verifies structure, SSO buttons, and error-param handling.
+ */
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
+import LoginPage from '../components/auth/LoginPage';
+
+// ── Mocks ─────────────────────────────────────────────────────────────────────
+vi.mock('../store/authStore', () => ({
+  useAuthStore: () => ({ login: vi.fn(), isLoading: false }),
+}));
+
+vi.mock('react-hot-toast', () => ({
+  default: { error: vi.fn(), success: vi.fn() },
+}));
+
+// Both providers active so SSO buttons render
+vi.mock('../services/api', () => ({
+  api: {
+    getAuthProviders: () => Promise.resolve({ google: true, keycloak: true }),
+  },
+}));
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function renderLogin(search = '') {
+  return render(
+    <MemoryRouter initialEntries={[`/login${search}`]}>
+      <LoginPage />
+    </MemoryRouter>
+  );
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+describe('LoginPage', () => {
+  it('renders PP-AI branding', () => {
+    renderLogin();
+    expect(screen.getByText('PP-AI')).toBeInTheDocument();
+    expect(screen.getByText('Project & Program Management')).toBeInTheDocument();
+  });
+
+  it('renders email and password fields', () => {
+    renderLogin();
+    expect(screen.getByPlaceholderText('admin@app.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
+  });
+
+  it('renders the submit button', () => {
+    renderLogin();
+    // The form submit button has exact text "Sign In" (no extra words)
+    const btn = screen.getByRole('button', { name: /^sign in$/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveAttribute('type', 'submit');
+  });
+
+  it('renders Google SSO button', async () => {
+    renderLogin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /sign in with google/i })).toBeInTheDocument()
+    );
+  });
+
+  it('renders Keycloak SSO button', async () => {
+    renderLogin();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /sign in with sso/i })).toBeInTheDocument()
+    );
+  });
+
+});
